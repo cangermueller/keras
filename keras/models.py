@@ -653,9 +653,10 @@ class Graph(Model, containers.Graph):
             val_f = self._test
         if validation_data:
             # can't use sample weights with validation data at this point
-            sample_weight = [standardize_weights(validation_data[name]) for name in self.output_order]
-            val_ins = [validation_data[name] for name in self.input_order] + [standardize_y(validation_data[name]) for name in self.output_order] + sample_weight
-
+            X_val = [validation_data[name] for name in self.input_order]
+            y_val = [standardize_y(validation_data[name]) for name in self.output_order]
+            sample_weight_list_val = [standardize_weights(y_val[i],
+                                                    sample_weight=sample_weight.get(self.output_order[i])) for i in range(len(self.output_order))]
         elif 0 < validation_split < 1:
             split_at = int(len(X[0]) * (1 - validation_split))
             X, X_val = (slice_X(X, 0, split_at), slice_X(X, split_at))
@@ -670,7 +671,11 @@ class Graph(Model, containers.Graph):
         sample_weight_list = [standardize_weights(y[i],
                                                   sample_weight=sample_weight_list[i],
                                                   class_weight=class_weight_list[i]) for i in range(len(self.output_order))]
+        sample_weight_list_val = [standardize_weights(y_val[i],
+                                                    sample_weight=sample_weight_list_val[i],
+                                                    class_weight=class_weight_list[i]) for i in range(len(self.output_order))]
         ins = X + y + sample_weight_list
+        val_ins = X_val + y_val + sample_weight_list_val
         history = self._fit(f, ins, out_labels=out_labels, batch_size=batch_size, nb_epoch=nb_epoch,
                             verbose=verbose, callbacks=callbacks,
                             val_f=val_f, val_ins=val_ins,
